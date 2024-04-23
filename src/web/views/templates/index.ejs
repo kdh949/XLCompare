@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>XL Compare</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"
+        type="text/javascript"></script>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/@mescius/spread-sheets/styles/gc.spread.sheets.excel2013white.css"
+        rel="stylesheet" type="text/css" />
+    <script type="text/javascript"
+        src="https://cdn.jsdelivr.net/npm/@mescius/spread-sheets/dist/gc.spread.sheets.all.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdn.jsdelivr.net/npm/@mescius/spread-sheets-io/dist/gc.spread.sheets.io.min.js"></script>
+
+    <!-- FileSaver.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/png" href="../logo.png">
+
+    <style>
+        .excel-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .excel-container .excel {
+            width: 50%;
+            display: flex;
+            margin: 0px 30px 0px 30px;
+            flex-direction: column;
+        }
+
+        .excel-display {
+            height: 700px;
+            margin: 10px 10px;
+        }
+
+        .excel-container .excel .control-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: row;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .excel-container .excel .control-container p {
+            margin-right: 10px;
+            font-weight: bold;
+            margin-bottom: 0;
+        }
+
+        .excel-container .excel .control-container select,
+        .excel-container .excel .control-container button {
+            margin-right: 10px;
+            height: calc(2.25rem + 2px);
+        }
+
+        .excel-container .excel .control-container input[type="file"] {
+            margin-right: 10px;
+            height: calc(2.25rem + 2px);
+            margin-top: 10px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        #syrma-heading {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            margin-left: 30px;
+        }
+
+        #syrma-heading h1 {
+            margin-left: 10px;
+        }
+    </style>
+
+    <script type="text/javascript">
+        var workbook1, workbook2;
+
+
+
+        function handleFileSelect1() {
+            const fileInput = document.getElementById('fileInput1');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const formData = new FormData();
+                const fileName = '1.xlsx'; // Append '1.xlsx' to the file name
+                formData.append('file', file, fileName);
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(response => response.text())
+                    .then(message => {
+                        console.log(message);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+        }
+
+        function handleFileSelect2() {
+            const fileInput = document.getElementById('fileInput2');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const formData = new FormData();
+                const fileName = '2.xlsx'; // Append '2.xlsx' to the file name
+                formData.append('file', file, fileName);
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(response => response.text())
+                    .then(message => {
+                        console.log(message);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        }
+
+
+
+        $(document).ready(function () {
+            workbook1 = new GC.Spread.Sheets.Workbook(document.getElementById("ss1"));
+            workbook2 = new GC.Spread.Sheets.Workbook(document.getElementById("ss2"));
+
+            function fetchBranches() {
+                $.ajax({
+                    url: 'https://api.github.com/repos/paragofficial/xl_cmp/branches',
+                    dataType: 'json',
+                    success: function (data) {
+                        var branchesDropdown1 = $('#branchesDropdown1');
+                        var branchesDropdown2 = $('#branchesDropdown2');
+                        branchesDropdown1.empty();
+                        branchesDropdown2.empty();
+                        $.each(data, function (index, branch) {
+                            branchesDropdown1.append($('<option></option>').attr('value', branch.name).text(branch.name));
+                            branchesDropdown2.append($('<option></option>').attr('value', branch.name).text(branch.name));
+                        });
+                    }
+                });
+            }
+
+            fetchBranches();
+
+            $('#branchesDropdown1').change(function () {
+                var selectedBranch = $(this).val();
+                loadFiles(selectedBranch, 1);
+            });
+
+            $('#branchesDropdown2').change(function () {
+                var selectedBranch = $(this).val();
+                loadFiles(selectedBranch, 2);
+            });
+
+            function loadFiles(branchName, excelIndex) {
+                var url = 'https://api.github.com/repos/paragofficial/xl_cmp/contents?ref=' + branchName;
+                $.ajax({
+                    url: url,
+                    dataType: 'json',
+                    success: function (data) {
+                        var filesDropdown = $('#filesDropdown' + excelIndex);
+                        filesDropdown.empty();
+                        $.each(data, function (index, file) {
+                            if (file.type === 'file') {
+                                filesDropdown.append($('<option></option>').attr('value', file.name).text(file.name));
+                            }
+                        });
+                    }
+                });
+            }
+
+            $('#downloadButton1').click(function () {
+                var selectedBranch = $('#branchesDropdown1').val();
+                var selectedFile = $('#filesDropdown1').val();
+                downloadFile(selectedBranch, selectedFile);
+            });
+
+            $('#downloadButton2').click(function () {
+                var selectedBranch = $('#branchesDropdown2').val();
+                var selectedFile = $('#filesDropdown2').val();
+                downloadFile(selectedBranch, selectedFile);
+            });
+
+            function downloadFile(branchName, fileName) {
+                var url = 'https://raw.githubusercontent.com/paragofficial/xl_cmp/' + branchName + '/' + fileName;
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function (data) {
+                        var a = document.createElement('a');
+                        var url = window.URL.createObjectURL(data);
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.append(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error downloading file:', status, error);
+                        alert('Failed to download the file. Please try again.');
+                    }
+                });
+            }
+
+            document.getElementById('open1').onclick = function () {
+                var file = document.querySelector('#selectedFile1').files[0];
+                if (!file) {
+                    return;
+                }
+                workbook1.import(file);
+            };
+
+            document.getElementById('open2').onclick = function () {
+                var file = document.querySelector('#selectedFile2').files[0];
+                if (!file) {
+                    return;
+                }
+                workbook2.import(file);
+            };
+
+
+
+
+            $('#publishButton').click(function () {
+                var newBranchName = $('#newBranchName').val();
+                var fileToPublish = document.querySelector('#publishFile').files[0];
+
+                if (!newBranchName || !fileToPublish) {
+                    alert("Please enter a branch name and select a file to publish.");
+                    return;
+                }
+
+                createBranch(newBranchName, fileToPublish);
+            });
+
+            function createBranch(newBranchName, fileToPublish) {
+                // Get the SHA of the 'main' branch (replace 'main' with the actual branch name)
+                $.ajax({
+                    url: 'https://api.github.com/repos/paragofficial/xl_cmp/git/refs/heads/main',  // Use the correct branch name
+                    method: 'GET',
+                    headers: {
+                        // 'Authorization': 'token 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' // Replace with your generated OAuth token
+                    },
+                    success: function (data) {
+                        if (data.object && data.object.sha) {
+                            var baseCommitSHA = data.object.sha;
+
+                            // Create a new branch
+                            $.ajax({
+                                url: 'https://api.github.com/repos/paragofficial/xl_cmp/git/refs',
+                                method: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    ref: 'refs/heads/' + newBranchName,
+                                    sha: baseCommitSHA
+                                }),
+                                headers: {
+                                    // 'Authorization': 'token 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' // Replace with your generated OAuth token
+                                },
+                                success: function () {
+                                    console.log('Branch created successfully: ' + newBranchName);
+                                    uploadFileToBranch(newBranchName, fileToPublish);
+                                },
+                                error: function (xhr, textStatus, errorThrown) {
+                                    console.error('Error creating branch:', textStatus, errorThrown);
+                                    alert('Failed to create a new branch. Please check the branch name and try again.');
+                                }
+                            });
+                        } else {
+                            alert('Failed to get the SHA of the base branch. Please check the branch name and try again.');
+                        }
+                    },
+                    error: function (xhr, textStatus, errorThrown) {
+                        console.error('Error getting base branch SHA:', textStatus, errorThrown);
+                        alert('Failed to get the SHA of the base branch. Please check the branch name and try again.');
+                    }
+                });
+            }
+
+            function uploadFileToBranch(branchName, file) {
+                var url = 'https://api.github.com/repos/paragofficial/xl_cmp/contents/' + file.name;
+
+                // Read the content of the file
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var fileContent = e.target.result;
+
+                    // Base64 encode the file content
+                    var base64Content = btoa(fileContent);
+
+                    // Create the data object with required properties
+                    var data = {
+                        message: 'Add ' + file.name,
+                        content: base64Content,
+                        branch: branchName
+                    };
+
+                    $.ajax({
+                        url: url,
+                        method: 'PUT',
+                        headers: {
+                            // 'Authorization': 'token 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', // Replace with your generated OAuth token
+                            'Content-Type': 'application/json'
+                        },
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        success: function () {
+                            alert('File published successfully to the new branch: ' + branchName);
+                        },
+                        error: function (xhr, textStatus, errorThrown) {
+                            console.error('Error uploading file:', textStatus, errorThrown);
+                            alert('Failed to publish the file to the new branch. Please try again.');
+                        }
+                    });
+                };
+
+                reader.readAsBinaryString(file);
+            }
+
+
+            function executePythonScript() {
+                $.ajax({
+                    url: '/executePythonScript',
+                    type: 'GET',
+                    success: function (data) {
+                        console.log('Python script executed successfully:', data);
+                        // After executing the Python script, open the Excel files
+                        
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error executing Python script:', status, error);
+                    }
+                });
+            }
+            $('#compareButton').click(function () {
+                executePythonScript();
+                
+            });
+
+            $('#resetButton').click(function () {
+                resetUploadsFolder();
+            });
+
+            function resetUploadsFolder() {
+                $.ajax({
+                    url: '/reset',
+                    type: 'GET',
+                    success: function (data) {
+                        console.log('Uploads folder reset:', data);
+                        alert('Uploads folder reset successfully');
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error resetting uploads folder:', status, error);
+                        alert('Failed to reset uploads folder. Please try again.');
+                    }
+                });
+            }
+
+
+        });
+    </script>
+</head>
+
+<body>
+    <div id="syrma-heading" style="display: flex; align-items: center; ">
+        <img src="../logo.png" alt="Syrma SGS Technologies" width="150" height="50">
+        <h1 style="margin-left: 10px;">Syrma SGS Technologies</h1>
+        <div style="flex-grow: 1; text-align: center; margin-right: 600px;">
+            <h1>XL Compare</h1>
+        </div>
+    </div>
+
+    <div class="excel-container">
+        <div class="excel">
+            <div class="control-container">
+                <p>Select Git Branch for Excel File 1:</p>
+                <select id="branchesDropdown1" data-workbook="1"></select>
+                <p>Select File for Excel File 1:</p>
+                <select id="filesDropdown1"></select>
+                <button id="downloadButton1" class="btn btn-primary">Download File</button>
+            </div>
+            <div id="ss1" class="excel-display"></div>
+            <div class="control-container">
+                <p>Compare File 1</p>
+                <input type="file" id="fileInput1" onchange="handleFileSelect1()">
+                <p>View File 1:</p>
+                <input type="file" id="selectedFile1" name="files[]" accept=".xlsx" />
+                <button id="open1" class="btn btn-secondary">Open</button>
+            </div>
+        </div>
+        <div>
+            <button id="compareButton" class="btn btn-primary mx-auto">Compare</button>
+            <button id="resetButton" class="btn btn-primary mx-auto">Reset</button>
+        </div>
+        <div class="excel">
+            <div class="control-container">
+                <p>Select Git Branch for Excel File 2:</p>
+                <select id="branchesDropdown2" data-workbook="2"></select>
+                <p>Select File for Excel File 2:</p>
+                <select id="filesDropdown2"></select>
+                <button id="downloadButton2" class="btn btn-primary">Download File</button>
+            </div>
+            <div id="ss2" class="excel-display"></div>
+            <div class="control-container">
+                <p>Compare File 2</p>
+                <input type="file" id="fileInput2" onchange="handleFileSelect2()">
+                <p>View File 2:</p>
+                <input type="file" id="selectedFile2" name="files[]" accept=".xlsx" />
+                <button id="open2" class="btn btn-secondary">Open</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="excel">
+        <div class="control-container">
+
+            <p>Enter New Branch Name:</p>
+            <input type="text" id="newBranchName" />
+            <p>Select File to Publish:</p>
+            <input type="file" id="publishFile" name="files[]" accept=".xlsx" />
+            <button id="publishButton" class="btn btn-success">Publish</button>
+        </div>
+    </div>
+</body>
+
+</html>

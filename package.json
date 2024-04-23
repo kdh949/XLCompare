@@ -1,0 +1,14 @@
+{
+  "name": "nal_rfq",
+  "version": "1.0.0",
+  "description": "XL_CMP is a Version Control System for Excel workbooks that tracks changes and compares worksheets for easy collaboration.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-modules": "^1.0.1"
+  }
+}
